@@ -20,6 +20,7 @@
   --crimson:#BF4132;
   --teal:#5C97A6;
   --muted:#8496A8;
+  --plum:#B98BD0;
   --r:14px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -60,6 +61,11 @@ h1 em{font-style:italic;color:var(--saffron)}
 .pile[data-p="known"].on{border-color:var(--olive);box-shadow:inset 0 0 0 1px var(--olive)}
 .pile[data-p="important"].on{border-color:var(--crimson);box-shadow:inset 0 0 0 1px var(--crimson)}
 .pile[data-p="almost"].on{border-color:var(--teal);box-shadow:inset 0 0 0 1px var(--teal)}
+.pile.produce{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;padding:9px 12px}
+.pile.produce .num{font-size:20px;color:var(--plum)}
+.pile.produce .lbl{margin-top:0}
+.pile.produce .sub{margin-left:auto;font-size:11px;color:var(--muted)}
+.pile[data-p="produce"].on{border-color:var(--plum);box-shadow:inset 0 0 0 1px var(--plum)}
 .pile.on .lbl{color:var(--parchment)}
 
 /* ---- card ---- */
@@ -134,6 +140,7 @@ footer>span{display:flex;gap:6px}
     <button class="pile" data-p="known"><span class="num" id="n-known">0</span><span class="lbl">Known</span></button>
     <button class="pile" data-p="almost"><span class="num" id="n-almost">0</span><span class="lbl">Almost</span></button>
     <button class="pile" data-p="important"><span class="num" id="n-important">0</span><span class="lbl">Important</span></button>
+    <button class="pile produce" data-p="produce"><span class="num" id="n-produce">6</span><span class="lbl">Produce</span><span class="sub">write it, then reveal</span></button>
   </div>
 
   <div class="stage">
@@ -260,16 +267,19 @@ const store={
 
 let state={pile:'live',assign:DATA.map(()=>'live'),order:[],idx:0,shown:false,picked:null,dirty:false};
 const LETTERS=['Α','Β','Γ','Δ'];
-const PNAME={live:'Live',known:'Known',almost:'Almost',important:'Important'};
+const PNAME={live:'Live',known:'Known',almost:'Almost',important:'Important',produce:'Produce'};
+const PRODUCE=[61,63,64,65,66,67].map(n=>n-1); // free-writing questions, always here
 const $=id=>document.getElementById(id);
 
 function buildOrder(keepId){
-  state.order=DATA.map((_,i)=>i).filter(i=>state.assign[i]===state.pile);
+  state.order=state.pile==='produce'?PRODUCE.slice():DATA.map((_,i)=>i).filter(i=>state.assign[i]===state.pile);
   const at=keepId!=null?state.order.indexOf(keepId):-1;
   state.idx=at>-1?at:0;
 }
 
 function render(){
+  document.querySelector('.pile[data-p="produce"]').classList.toggle('on',state.pile==='produce');
+  $('n-produce').textContent=PRODUCE.length;
   ['live','known','almost','important'].forEach(p=>{
     $('n-'+p).textContent=state.assign.filter(x=>x===p).length;
     document.querySelector(`.pile[data-p="${p}"]`).classList.toggle('on',state.pile===p);
@@ -311,7 +321,7 @@ function render(){
   card.scrollTop=0;
   document.querySelectorAll('#sort button').forEach(b=>b.classList.toggle('chosen',state.assign[id]===b.dataset.to));
   $('reveal').style.display=mcq?'none':'';
-  $('sort').style.display=(mcq?done:state.shown)?'':'none';
+  $('sort').style.display=(state.pile!=='produce'&&(mcq?done:state.shown))?'':'none';
   $('reveal').textContent=state.shown?'Hide answer':'Show answer';
 }
 const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -355,7 +365,7 @@ $('piles').onclick=e=>{
   state.pile=b.dataset.p; state.shown=false; state.picked=null; state.dirty=false; buildOrder(); render();
 };
 $('sort').onclick=e=>{
-  const b=e.target.closest('button'); if(!b||!state.order.length)return;
+  const b=e.target.closest('button'); if(!b||!state.order.length||state.pile==='produce')return;
   const id=state.order[state.idx];
   state.assign[id]=b.dataset.to;
   store.set(state.assign);
